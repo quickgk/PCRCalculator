@@ -813,7 +813,7 @@ namespace PCRCaculator
 #endif
 
 #if ENABLE_THREADING
-        private static object loadBundleLock = new();
+        internal static readonly object loadBundleLock = new();
         public static AssetBundle TryGetAssetBundleByNameWithLock(string fullname, bool useOldManifest)
         {
             lock (loadBundleLock)
