@@ -156,6 +156,26 @@ curl --fail-with-body \
 
 请求 DTO 见 [BattleSimulationServer.cs](../Assets/Scrips/Elements/Battle/BattleSimulationServer.cs)，角色排序和初始化见 [MyGameCtrl.cs](../Assets/Scrips/Elements/Battle/MyGameCtrl.cs)，UB 编码见 [SemanUbManager.cs](../Assets/Scrips/Elements/Battle/SemanUbManager.cs)。
 
+### 2.2.1 零点按：UB 停表窗口切 AUTO / SET（.NET headless 扩展）
+
+先 `GET /zero-press/capabilities`。仅在 HTTP 200 且返回 `{"Protocol":"ub-cut-in-v1","BossCutIn":true,"BossMinBlackoutSeconds":1}` 的兼容服务上发送主王规则。旧服务可能忽略未知字段而正常返回伤害；这不是支持证据。缺失预期的开场回执或事件数组必须视为未验证。
+
+`POST /simulate` 仍接收数组。每项一次、一个种子（`RepeatCount=1`，复验时显式设置固定 seed）；不与帧表、语义释放、顺序 UB 或本地 `.asm` 混用。请求的顶层可增加：
+
+```json
+{"ZeroPressPolicy":{"OpeningAuto":true,"OpeningMask":3,"Rules":[
+  {"UnitId":101001,"Occurrence":2,"Auto":false,"Mask":4},
+  {"UnitId":0,"Occurrence":1,"Auto":true,"Mask":1}]}}
+```
+
+此例仅示意字段；正数 `UnitId` 必须在本场 `PlayerList` 中。`Mask=0..31` 的 bit i 表示**请求** `PlayerList[i]` 的 SET，内部排序不改变此映射。开场覆盖原有 `IsAutoMode` / `IsSetMode` / `SetToggles`。每次匹配同时设置新的 AUTO 和全套 SET，其余时刻保持状态，不排队、不直接点 UB；角色仍由引擎按 TP、目标、状态、AUTO 和 SET 自然释放。`Occurrence` 从 1 开始对各触发源独立计数。禁止重复键；永未发生的合法键不报错、不产生事件。
+
+- **玩家（正 ID）**：只有本队原始角色经过 `StartCutIn → OnCutInEnd`、原生扣能判定成功、确实进入自己的 `SKILL_1` 并且仍停帧或持有黑幕时才触发；仅预约、扣能失败或开招失败均不计。分身/召唤物不会接管同 ID 槽位。
+- **当前公会战主王（0）**：仅当原生 UB 成功扣能并进入 `SKILL_1`，且为引擎的 `BossUnit` 本体、与当前首个公会战 `enemy_id` 和 `unit_id` 一致、当前 UB 正在本体拥有的持续黑幕中（技能在 1× 速的原生黑幕至少 1.0 秒，`BossMinBlackoutSeconds=1`；这是保守搜索边界，不是所有人手速的实测保证）、未强制 AUTO 时计数。小怪、额外效果、召唤/分身、普通技能及没有持续停表的瞬时转场均不是窗口。`BossCutIn:true` 表示支持这项**有条件**的识别，不保证每场或每个王必有窗口。
+- 对照依据：[原生停表计时与黑幕](../Assets/Scrips/Elements/Battle/BattleManager.cs) 的 `updateFrame`、`OnCutInEnd`、`SetSkillExeScreen`、`updateBlackoutUnit`；[实际 UB 的时长与 ID](../Assets/Scrips/Elements/UnitActionController.cs) 的 `StartAction`；[面板](../Assets/Scrips/PCRCalcularor/BattleUIManager.cs) 的 `ChangeUbSet` / `OnAutoToggleSwitched` 可在黑幕期间改变 `pressing` / `IsAutoMode`。以上为该版模拟器建模口径，不等于在实际游戏内已做实测。
+
+每场成功结果的顶层返回 `ZeroPressOpening:{Auto,Mask}` 以及 `ZeroPressTrace:[{UnitId,Occurrence,Frame,Auto,Mask,Applied}, ...]`。开场单列，不占事件序号；即使 `Rules=[]`，也按因果顺序记录全部合格事件；无窗口为 `[]`。`Frame` 仅作诊断，同帧事件保留原始顺序。`Applied` 表示存在匹配的规则（即使开关值未改变）；`Auto,Mask` 是该次事件后的状态。无策略的旧请求不含这两个结果字段。见[数据契约/状态机](ZeroPressPolicy.cs)、[原引擎绑定](MyGameCtrl.ZeroPress.cs)与[独立合成测试](../scripts/zero-press-test/ZeroPressTests.csproj)。
+
 ### 2.3 UnitData 角色养成
 
 精确回放时，设置 `ToMaxUnitAttr=false` 并提供完整养成配置，字段名按表中拼写传入。

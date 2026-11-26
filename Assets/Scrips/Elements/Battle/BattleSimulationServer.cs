@@ -224,6 +224,12 @@ namespace Elements.Battle
 
     public class BattleSimulationResponse
     {
+#if !UNITY_5_3_OR_NEWER
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public ZeroPressState ZeroPressOpening { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public List<ZeroPressEvent> ZeroPressTrace { get; set; }
+#endif
         public List<PCRCaculator.UnitData> PlayerList { get; set; }
         public List<PCRCaculator.UnitData> EnemyList { get; set; }
         public bool Success { get; set; }
@@ -257,6 +263,9 @@ namespace Elements.Battle
     [Serializable]
     public class BattleSimulationRequest
     {
+#if !UNITY_5_3_OR_NEWER
+        public ZeroPressPolicyData ZeroPressPolicy { get; set; }
+#endif
         public int CalcStats { get; set; } = 0;
         public List<PCRCaculator.UnitData> PlayerList { get; set; }
         public List<PCRCaculator.UnitData> EnemyList { get; set; }
@@ -307,6 +316,9 @@ namespace Elements.Battle
         {
             return new BattleSimulationRequest
             {
+#if !UNITY_5_3_OR_NEWER
+                ZeroPressPolicy = this.ZeroPressPolicy?.Copy(),
+#endif
                 CalcStats = this.CalcStats,
                 OptimizationTarget = this.OptimizationTarget,
                 OptimizationTpDemand = this.OptimizationTpDemand,

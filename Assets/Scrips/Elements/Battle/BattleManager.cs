@@ -2525,7 +2525,12 @@ namespace Elements.Battle
             if (FNHGFDNICFG.ConsumeEnergy() == eConsumeResult.FAILED || GameState != eBattleGameState.PLAY)
                 FNHGFDNICFG.CutInFrameSet.ServerCutInFrame = -3;
             else
+            {
                 FNHGFDNICFG.SetState(UnitCtrl.ActionState.SKILL_1);
+#if !UNITY_5_3_OR_NEWER
+                MyGameCtrl.Instance.OnZeroCommittedCutIn(FNHGFDNICFG, this);
+#endif
+            }
             isDamageNumHiddenBySkillScreen = false;
             IsPlayCutin = false;
             if (MOBKHPNMEDM)
@@ -2617,6 +2622,10 @@ namespace Elements.Battle
             isStarted = false;
         }
 
+#if !UNITY_5_3_OR_NEWER
+        internal float ZeroPressBlackoutRemaining(UnitCtrl owner) => isStarted && ReferenceEquals(owner, LNMLGGPGEIG)
+            ? blackoutTime - blackoutTimeCounter : 0f;
+#endif
         public void SetBlackoutTimeZero() => blackoutTime = 0.0f;
 
         private IEnumerator updateBlackOutFadeOut(UnitCtrl IMDKENFNOMF, bool ADJGECMDGDK)
@@ -5286,7 +5295,11 @@ namespace Elements.Battle
 
             }
 
-            if (ExcelHelper.ExcelHelper.AsmExportEnabled && tempData.isGuildBattle)
+            if (
+#if !UNITY_5_3_OR_NEWER
+                MyGameCtrl.Instance.ZeroPress == null &&
+#endif
+                ExcelHelper.ExcelHelper.AsmExportEnabled && tempData.isGuildBattle)
             {
                 scriptMgr = new ScriptManager(this);
                 scriptMgr.ParseScript();
