@@ -47,6 +47,22 @@ namespace PCRCaculator
             return JsonConvert.DeserializeObject<T>(objDict[typeof(T).FullName ?? nameof(T)]);
         }
 
+        internal static void SaveAtomically<T>(T value)
+        {
+            if (objDict == null) LoadAll();
+            var snapshot = new Dictionary<string, string>(objDict);
+            snapshot[typeof(T).FullName ?? nameof(T)] = JsonConvert.SerializeObject(value);
+            string target = Path.GetFullPath(path);
+            string temp = target + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                File.WriteAllText(temp, JsonConvert.SerializeObject(snapshot));
+                if (File.Exists(target)) File.Replace(temp, target, null); else File.Move(temp, target);
+                objDict = snapshot;
+            }
+            finally { if (File.Exists(temp)) File.Delete(temp); }
+        }
+
         public static void Save<T>(T t)
         {
             objDict[typeof(T).FullName ?? nameof(T)] = JsonConvert.SerializeObject(t);

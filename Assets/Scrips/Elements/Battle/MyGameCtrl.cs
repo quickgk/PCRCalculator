@@ -362,6 +362,7 @@ namespace Elements
                 var playerGroup = mainManager.GuildBattleData.SettingData.GetCurrentPlayerGroup();
                 tempData.guildEnemy = new List<EnemyData>(mainManager.GuildBattleData.enemyData);
                 tempData.waveGroupId = playerGroup.waveGroupId;
+                tempData.importedAxis = playerGroup.importedAxis;
                 ConfigureLabyrinthContext(
                     tempData,
                     playerGroup.labyrinthQuestId,
@@ -408,7 +409,7 @@ namespace Elements
             BattleManager.Instance.Init(this);
             BattleManager.Instance.semanubmanager.Disable();
 
-            if (mainManager.IsGuildBattle)
+            if (mainManager.IsGuildBattle && tempData.importedAxis == null)
             {
                 if (IsSemanMode)
                 {
@@ -443,6 +444,7 @@ namespace Elements
                     var playerGroup = mainManager.GuildBattleData.SettingData.GetCurrentPlayerGroup();
                     tempData.guildEnemy = new List<EnemyData>(mainManager.GuildBattleData.enemyData);
                     tempData.waveGroupId = playerGroup.waveGroupId;
+                    tempData.importedAxis = playerGroup.importedAxis;
                     ConfigureLabyrinthContext(
                         tempData,
                         playerGroup.labyrinthQuestId,
@@ -508,7 +510,7 @@ namespace Elements
             BattleUIManager.Instance.ReStart();
             staticBattleManager.Init(this);
             BattleManager.Instance.semanubmanager.Disable();
-            if (!tempData.isGuildBattle)
+            if (!tempData.isGuildBattle || tempData.importedAxis != null)
             {
                 BattleManager.Instance.ubmanager.SetUbExec(null, 0);
                 return;
@@ -1411,6 +1413,7 @@ namespace Elements
 
     public class TempData
     {
+        public GuildAxisPlan importedAxis;
         public List<List<UnitParameter>> AllUnitParameters;
         public List<UnitParameter> PlayerParameters;
         public List<UnitParameter> EnemyParameters;

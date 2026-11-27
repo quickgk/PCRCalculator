@@ -19,7 +19,7 @@ using UnityEngine.Networking;
 using SFB;
 namespace PCRCaculator.Guild
 {
-    public class GuildManager : MonoBehaviour
+    public partial class GuildManager : MonoBehaviour
     {
 #if ENABLE_THREADING
         [ThreadStatic]
@@ -366,6 +366,9 @@ namespace PCRCaculator.Guild
             //Load();
             //LoadAddedPlayerData();
             RefreshOnStart();
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            AddAxisImportButton();
+#endif
             if (MainManager.Instance.AutoCalculatorData.isCalculating)
             {
                 OpenAutoCalculatePage();
@@ -1607,7 +1610,12 @@ namespace PCRCaculator.Guild
         {
             var players = SettingData.GetCurrentPlayerData()?.playrCharacters;
             if (players != null && players.Count > 0)
-                return true;
+            {
+                var axis = SettingData.GetCurrentPlayerGroup().importedAxis;
+                if (axis == null || axis.unitIds != null && axis.unitIds.SequenceEqual(players.Select(u => u.unitId))) return true;
+                MainManager.Instance.WindowMessage("阵容与保存的图文轴不一致。请重新导入，或清空 UB 后使用手工轴。");
+                return false;
+            }
 
             MainManager.Instance.WindowConfigMessage("请至少选择一名我方角色后再开始战斗。", null);
             return false;
@@ -2394,6 +2402,8 @@ namespace PCRCaculator.Guild
             var group = SyncSequenceUBToggleToSetting();
             if (!isEditingUBTime && isButton)
             {
+                group.importedAxis = null;
+                group.importedAxisText = null;
                 if (SemanModeToggle.isOn)
                     group.SemanUBExecTimeData.Clear();
                 else
@@ -2995,6 +3005,9 @@ namespace PCRCaculator.Guild
             MainManager.Instance.WindowConfigMessage("是否清空当前队伍UB？", clearUb_0);
         }
         public void clearUb_0(){
+          var group = SettingData.GetCurrentPlayerGroup();
+          group.importedAxis = null;
+          group.importedAxisText = null;
           SettingData.ClearUBExecTimeData(SemanModeToggle.isOn);
           SaveDataToJson();
           Refresh();
@@ -3387,6 +3400,15 @@ namespace PCRCaculator.Guild
             //guildRandomDatas = new List<GuildRandomData>();
             //guildRandomDatas.Add(new GuildRandomData());
         }
+        public GuildSettingData WithImportedTeam(int number, GuildPlayerGroupData group)
+        {
+            if (number < 1 || number > 9999 || group?.importedAxis == null) throw new ArgumentException("目标队伍号或操作轴无效。");
+            var copy = (GuildSettingData)MemberwiseClone();
+            copy.guildPlayerGroupDatas = new List<GuildPlayerGroupData>(guildPlayerGroupDatas);
+            while (copy.guildPlayerGroupDatas.Count < number) copy.AddOnePlayerGroup();
+            copy.guildPlayerGroupDatas[number - 1] = group;
+            return copy;
+        }
         public void AddOnePlayerGroup()
         {
             //int pr = addedPlayerDatas.Count;
@@ -3577,6 +3599,8 @@ namespace PCRCaculator.Guild
     public class GuildPlayerGroupData : TeamEnhanceConfiguration
     {
         public AddedPlayerData playerData;
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)] public GuildAxisPlan importedAxis;
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)] public string importedAxisText;
         // Null means the arena opponent inherits this group's configuration.
         public TeamEnhanceConfiguration arenaEnemyTeamEnhance;
         public List<int> labyrinthEnhancedNodeIds = new List<int>();

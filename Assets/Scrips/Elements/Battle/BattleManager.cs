@@ -31,7 +31,7 @@ namespace Elements.Battle
         bool _Update();
     }
 
-    public class BattleManager : MonoBehaviour, ISingletonField
+    public partial class BattleManager : MonoBehaviour, ISingletonField
     {
         private int skillTargetCacheKey = Environment.TickCount;
 
@@ -1021,6 +1021,7 @@ namespace Elements.Battle
                     return;
                 }
             }
+            ImportedAxis?.Clock(AxisSecond);
             ++FrameCount;
             if (BattleLeftTime <= 0.0 && battleResult != eBattleResult.WIN)
             {
@@ -1098,7 +1099,13 @@ namespace Elements.Battle
                unitSpineControllerList.ForEach(spineCtrl => spineCtrl.RealLateUpdate());
 #endif
             scriptMgr?.Update();
+            if (ImportedAxis != null && !GetIsPlayCutin() && GameState != eBattleGameState.NEXT_WAVE_PROCESS)
+            {
+                int target = ImportedAxis.PressSlot();
+                if (target >= 0) MyGameCtrl.Instance.TryingExecUB(target);
+            }
             battleUnionBurstController.TryExecUnionBurst();
+            ImportedAxis?.AfterInput();
             IsPausingEffectSkippedInThisFrame = false;
             IsTalentBonusEffectPlaying = false;
             isUpdateFrameExecuted = true;
@@ -2830,6 +2837,7 @@ namespace Elements.Battle
         }
         private void finishBattle(eBattleResult currentBattleResult)
         {
+            if (!battleFinished) ImportedAxis?.Finish();
             battleFinished = true;
 #if UNITY_5_3_OR_NEWER
             skipping = false;
@@ -4573,6 +4581,8 @@ namespace Elements.Battle
 
         private void ResetPerBattleTransientState()
         {
+            ImportedAxis = null;
+            scriptMgr = null;
             UnitCtrl.ResetGlobalOperationPoint();
             battleResult = eBattleResult.INVALID_VALUE;
             playerAllDead = false;
@@ -5286,7 +5296,15 @@ namespace Elements.Battle
 
             }
 
-            if (ExcelHelper.ExcelHelper.AsmExportEnabled && tempData.isGuildBattle)
+            if (!BindImportedAxis(gameCtrl))
+            {
+                battleManager.BattleReady = false;
+#if UNITY_5_3_OR_NEWER
+                PCRCaculator.Battle.BattleUIManager.Instance.ExitButton2();
+#endif
+                yield break;
+            }
+            if (ExcelHelper.ExcelHelper.AsmExportEnabled && tempData.isGuildBattle && tempData.importedAxis == null)
             {
                 scriptMgr = new ScriptManager(this);
                 scriptMgr.ParseScript();

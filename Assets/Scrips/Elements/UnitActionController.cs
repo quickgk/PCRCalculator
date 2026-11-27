@@ -1862,6 +1862,7 @@ namespace Elements
 #if !REDUCE_ANALYSE
             actionExecData.result = isResisted ? UnitActionExecData.ActionState.MISS : UnitActionExecData.ActionState.NORMAL;
 #endif
+            if (exec) Owner.AxisOnExecAction?.Invoke(Owner.UnitId, skill.SkillId);
             Owner.SemanOnExecAction?.Invoke(Owner.UnitId, skill.SkillId);
 #if !REDUCE_ANALYSE
             if (!Owner.battleManager.skipping)

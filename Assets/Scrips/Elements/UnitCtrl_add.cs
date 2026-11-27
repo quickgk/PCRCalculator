@@ -48,6 +48,7 @@ namespace Elements
         public Action<int, int> SemanOnStartAction;
         public Action<int, int, UnitActionExecData> NoSkipOnExecAction;
         public Action<int, int> SemanOnExecAction;
+        internal Action<int, int> AxisOnExecAction;
         public Action<int, int, long, int> NoSkipOnDamage;
         public Action<bool, long, bool, long, LongWithEx> OnDamage2;
         public Action<int, int, LongWithEx, int,string> NoSkipOnBaseValueChanged;

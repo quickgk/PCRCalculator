@@ -1337,6 +1337,9 @@ namespace PCRCaculator
                 || TalentQuestEnemyParameterDic.TryGetValue(enemyId, out enemyData)
                 || TowerEnemyParameterDic.TryGetValue(enemyId, out enemyData);
         }
+        internal bool TryGetConfiguredUnitNickname(int id, out string nickname) =>
+            unitNickNameDic.TryGetValue(id, out nickname) || unitNickNameDic2.TryGetValue(id, out nickname);
+
         public string GetUnitNickName(int unitid)
         {
             if (unitid >= 400000 && unitid <= 499999)
