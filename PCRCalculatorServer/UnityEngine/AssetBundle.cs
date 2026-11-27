@@ -71,8 +71,7 @@ namespace UnityEngine
         }
 
 #if ENABLE_THREADING
-        // LoadDeps can re-enter ABExTool during LoadAsset; keep parsing and cache publication on one monitor.
-        private static object loaderLock => ABExTool.loadBundleLock;
+        private static object loaderLock = new();
 #endif
         static AssetBundle()
         {

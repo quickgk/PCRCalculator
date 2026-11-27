@@ -36,15 +36,10 @@ namespace PCRCalculatorServer
             this.serverOptions = serverOptions ?? throw new ArgumentNullException(nameof(serverOptions));
         }
 
-        [HttpGet("/zero-press/capabilities")]
-        public object ZeroPressCapabilities() => new { Protocol = "ub-cut-in-v1", BossCutIn = true, BossMinBlackoutSeconds = ZeroPressRun<UnitCtrl>.BossMinBlackoutSeconds };
-
         [HttpPost("/simulate")]
-        public async Task<ActionResult<BattleSimulationResponse[]>> Simulate(BattleSimulationRequest[] battleRequest)
+        public async Task<BattleSimulationResponse[]> Simulate(BattleSimulationRequest[] battleRequest)
         {
             battleRequest ??= Array.Empty<BattleSimulationRequest>();
-            if (battleRequest.Any(r => r?.ZeroPressPolicy != null && r.RepeatCount != 1))
-                return BadRequest("ZeroPressPolicy requires one seed per request: set RepeatCount=1 and batch requests in an array.");
 
             var (expandedRequests, requestMap, groupSizes) = ExpandRequests(battleRequest);
 
@@ -131,8 +126,6 @@ namespace PCRCalculatorServer
                     response[index] = new BattleSimulationResponse
                     {
                         PlayerList = playerList,
-                        ZeroPressOpening = MyGameCtrl.Instance.ZeroPress?.Opening,
-                        ZeroPressTrace = MyGameCtrl.Instance.ZeroPress?.TraceSnapshot(),
                         EnemyList = enemyList,
                         Success = true,
                         Message = "战斗模拟完成",

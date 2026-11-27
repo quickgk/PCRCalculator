@@ -17,7 +17,7 @@ using Debug = UnityEngine.Debug;
 
 namespace Elements
 {
-    public partial class MyGameCtrl : MonoBehaviour
+    public class MyGameCtrl : MonoBehaviour
     {
 #if ENABLE_THREADING
         [ThreadStatic]
@@ -537,14 +537,8 @@ namespace Elements
             BattleStats.LogLevel = BattleStatistics.NormalizeLogLevel(req.CalcStats);
             BattleStats.Reset();
             BattleStats.ConfigureActionProgressSnapshots(req.ActionProgressFrames, req.BattleTime);
-#if !UNITY_5_3_OR_NEWER
-            BeginZeroPress(req);
-#endif
             // Only use the minimal parameters provided by the HTTP request
             IsAutoMode = req.IsAutoMode;
-#if !UNITY_5_3_OR_NEWER
-            if (ZeroPress != null) IsAutoMode = req.ZeroPressPolicy.OpeningAuto;
-#endif
             IsSetMode = req.IsSetMode;
             IsSemanMode = req.IsSemanMode;
             mainManager.SetArenaEnemyTeamEnhanceOverride(CreateEnemyTeamEnhanceConfiguration(req));
@@ -767,14 +761,6 @@ namespace Elements
         {
             if (!hasPendingServerSetState)
                 return;
-#if !UNITY_5_3_OR_NEWER
-            if (ZeroPress != null)
-            {
-                hasPendingServerSetState = false;
-                ZeroPress.Open(playerUnitCtrlDic);
-                return;
-            }
-#endif
 
             bool allSet = pendingServerAllSet;
             var setToggles = pendingServerSetToggles;
