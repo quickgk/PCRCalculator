@@ -363,6 +363,7 @@ namespace Elements
                 tempData.guildEnemy = new List<EnemyData>(mainManager.GuildBattleData.enemyData);
                 tempData.waveGroupId = playerGroup.waveGroupId;
                 tempData.importedAxis = playerGroup.importedAxis;
+                tempData.importedAxisSlot = mainManager.GuildBattleData.SettingData.currentPlayerGroupNum;
                 ConfigureLabyrinthContext(
                     tempData,
                     playerGroup.labyrinthQuestId,
@@ -445,6 +446,7 @@ namespace Elements
                     tempData.guildEnemy = new List<EnemyData>(mainManager.GuildBattleData.enemyData);
                     tempData.waveGroupId = playerGroup.waveGroupId;
                     tempData.importedAxis = playerGroup.importedAxis;
+                    tempData.importedAxisSlot = mainManager.GuildBattleData.SettingData.currentPlayerGroupNum;
                     ConfigureLabyrinthContext(
                         tempData,
                         playerGroup.labyrinthQuestId,
@@ -1367,6 +1369,7 @@ namespace Elements
             else if (tempData.isGuildBattle)
             {
 #if UNITY_5_3_OR_NEWER
+                BattleManager.Instance.SaveCompletedGuildAxis(this);
                 GuildCalculator.Instance.OnBattleFinished(result, BattleHeaderController.CurrentFrameCount);
 #endif
             }
@@ -1414,6 +1417,9 @@ namespace Elements
     public class TempData
     {
         public GuildAxisPlan importedAxis;
+        internal int importedAxisSlot;
+        internal GuildPlayerGroupData recordedAxisTeam;
+        internal GuildPlayerGroupData ResultTeam => recordedAxisTeam ?? SettingData.GetCurrentPlayerGroup();
         public List<List<UnitParameter>> AllUnitParameters;
         public List<UnitParameter> PlayerParameters;
         public List<UnitParameter> EnemyParameters;

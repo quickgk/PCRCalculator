@@ -1613,7 +1613,7 @@ namespace PCRCaculator.Guild
             {
                 var axis = SettingData.GetCurrentPlayerGroup().importedAxis;
                 if (axis == null || axis.unitIds != null && axis.unitIds.SequenceEqual(players.Select(u => u.unitId))) return true;
-                MainManager.Instance.WindowMessage("阵容与保存的图文轴不一致。请重新导入，或清空 UB 后使用手工轴。");
+                MainManager.Instance.WindowMessage("阵容不符，请重导图文轴");
                 return false;
             }
 
@@ -1940,6 +1940,16 @@ namespace PCRCaculator.Guild
                     break;
             }
         }
+        internal void RefreshAxisTeam(int slot)
+        {
+            if (isLightStart || SettingData.currentPlayerGroupNum != slot) return;
+            AutoModeToggle.SetIsOnWithoutNotify(false);
+            SetModeToggle.SetIsOnWithoutNotify(false);
+            SemanModeToggle.SetIsOnWithoutNotify(false);
+            SequenceUBToggle?.SetIsOnWithoutNotify(false);
+            Refresh();
+        }
+
         private void Refresh()
         {
             var data = SettingData.GetCurrentPlayerGroup();
@@ -2449,7 +2459,7 @@ namespace PCRCaculator.Guild
         }
         public void UBTimeHelpButton()
         {
-            string msg = "可以输入帧(>100)或秒(<90)\n帧从0开始到5400结束\n秒从90秒开始倒计时到0结束\n例如输入61.001保存则自动转成1860.001帧\nAuto和Set按钮为改变开场状态(非以前强制)";
+            string msg = "可以输入帧(>100)或秒(<90)\n帧从0开始到5400结束\n秒从90秒开始倒计时到0结束\n例如输入61.001保存则自动转成1740.001帧\nAuto和Set按钮为改变开场状态(非以前强制)";
             MainManager.Instance.WindowConfigMessage(msg, null);
         }
         public void GuildBossDataEditButton(int index)
@@ -2491,22 +2501,8 @@ namespace PCRCaculator.Guild
                 MainManager.Instance.WindowConfigMessage("无效的存档！" , null);
                 return;
             }
-            int currentNum = SettingData.currentPlayerGroupNum;
-            //int guild_currentNum = guildTimelineData.currentSettingData.currentPlayerGroupNum;
-            //SettingData.addedPlayerDatas[currentNum] = guildTimelineData.currentSettingData.addedPlayerDatas[guild_currentNum];
-            //SettingData.ubExecTimeDataDic[currentNum] = guildTimelineData.currentSettingData.ubExecTimeDataDic[guild_currentNum];
-            //SettingData.useAutoModeDic[currentNum] = guildTimelineData.currentSettingData.useAutoModeDic[guild_currentNum];
-            var timeLine = guildTimelineData.playerGroupData.timeLineData;
-            if(timeLine == null)
-            {
-                guildTimelineData.playerGroupData.timeLineData = new GuildRandomData();
-                timeLine = guildTimelineData.playerGroupData.timeLineData;
-            }
-            timeLine.UseFixedRandomSeed = true;
-            timeLine.RandomSeed = guildTimelineData.currentRandomSeed;
-            SettingData.SetCurrentRandomData(timeLine);
-            SettingData.SetCurrentPlayerGroup(guildTimelineData.playerGroupData);
-            SettingData.GetCurrentPlayerGroup().UBExecTimeData = guildTimelineData.UBExecTime;
+            var group = guildTimelineData.playerGroupData.WithBattleRecording(guildTimelineData.UBExecTime, guildTimelineData.currentRandomSeed);
+            SettingData.SetCurrentPlayerGroup(group);
             Refresh();
             SaveDataToJson();
         }
@@ -3403,6 +3399,23 @@ namespace PCRCaculator.Guild
         public GuildSettingData WithImportedTeam(int number, GuildPlayerGroupData group)
         {
             if (number < 1 || number > 9999 || group?.importedAxis == null) throw new ArgumentException("目标队伍号或操作轴无效。");
+            return WithTeam(number, group);
+        }
+        internal GuildPlayerGroupData SaveRecordedTeam(int slot, GuildAxisPlan expected, List<List<float>> frames, int seed)
+        {
+            if (expected == null || (uint)slot >= (uint)guildPlayerGroupDatas.Count) return null;
+            var source = guildPlayerGroupDatas[slot];
+            if (!ReferenceEquals(source?.importedAxis, expected) || !expected.unitIds.SequenceEqual(source.playerData.playrCharacters.Select(u => u.unitId))) return null;
+            var group = source.WithBattleRecording(frames, seed);
+            group.importedAxis = null;
+            group.importedAxisText = null;
+            group.useAutoMode = group.useSetMode = group.useSemanMode = group.useSequenceUB = false;
+            SaveManager.SaveAtomically(WithTeam(slot + 1, group));
+            guildPlayerGroupDatas[slot] = group;
+            return group;
+        }
+        private GuildSettingData WithTeam(int number, GuildPlayerGroupData group)
+        {
             var copy = (GuildSettingData)MemberwiseClone();
             copy.guildPlayerGroupDatas = new List<GuildPlayerGroupData>(guildPlayerGroupDatas);
             while (copy.guildPlayerGroupDatas.Count < number) copy.AddOnePlayerGroup();
@@ -3598,6 +3611,14 @@ namespace PCRCaculator.Guild
     [Serializable]
     public class GuildPlayerGroupData : TeamEnhanceConfiguration
     {
+        internal GuildPlayerGroupData WithBattleRecording(List<List<float>> frames, int seed)
+        {
+            var copy = (GuildPlayerGroupData)MemberwiseClone();
+            copy.UBExecTimeData = frames;
+            copy.timeLineData = (timeLineData ?? new GuildRandomData()).WithFixedSeed(seed);
+            return copy;
+        }
+
         public AddedPlayerData playerData;
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)] public GuildAxisPlan importedAxis;
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)] public string importedAxisText;

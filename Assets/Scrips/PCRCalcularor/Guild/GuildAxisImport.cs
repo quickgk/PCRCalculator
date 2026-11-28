@@ -34,50 +34,83 @@ namespace PCRCaculator.Guild
         private void ShowAxisDialog(Canvas canvas)
         {
             if (axisDialog != null) return;
-            var ui = new DefaultControls.Resources();
-            var overlay = axisDialog = DefaultControls.CreatePanel(ui);
+            var chooser = ChoosePannelManager.Instance;
+            if (chooser == null) { MainManager.Instance.WindowMessage("选人界面尚未就绪。"); return; }
+            var pane = chooser.chooseBack_A.transform;
+            var roster = chooser.parent.GetComponentInParent<ScrollRect>(true);
+            var search = pane.Find("选择栏/Search").GetComponent<InputField>();
+            var secondary = pane.Find("取消").GetComponent<Button>();
+            var primary = chooser.nextButtonText.GetComponentInParent<Button>(true);
             var lifetime = new CancellationTokenSource();
-            void Place(GameObject obj, Transform parent, float x1, float y1, float x2, float y2)
+            void Place(RectTransform rect, Transform parent, float l, float b, float r, float t)
             {
-                var rect = (RectTransform)obj.transform;
-                rect.SetParent(parent, false); rect.anchorMin = new Vector2(x1,y1); rect.anchorMax = new Vector2(x2,y2);
+                rect.SetParent(parent, false); rect.localScale = Vector3.one;
+                rect.anchorMin = new Vector2(l, b); rect.anchorMax = new Vector2(r, t);
                 rect.offsetMin = rect.offsetMax = Vector2.zero;
-                foreach (var t in obj.GetComponentsInChildren<Text>(true)) { t.font = characterGroupNameText.font; t.fontSize = 18; }
+                rect.gameObject.layer = parent.gameObject.layer;
             }
-            Place(overlay, canvas.transform, 0,0,1,1);
-            overlay.name = "图文轴导入";
-            overlay.GetComponent<Image>().color = new Color(0,0,0,.72f);
-            var panel = DefaultControls.CreatePanel(ui);
-            Place(panel, overlay.transform, .12f,.09f,.88f,.91f);
-            panel.GetComponent<Image>().color = new Color(.13f,.15f,.20f,1);
-            Text Label(string value, float l, float b, float r, float t)
+            Image Surface(string name, Transform parent, Image skin, float l, float b, float r, float t)
             {
-                var obj = DefaultControls.CreateText(ui); Place(obj,panel.transform,l,b,r,t);
-                var label = obj.GetComponent<Text>(); label.text = value; label.color = Color.white;
-                label.alignment = TextAnchor.MiddleLeft; return label;
+                var image = new GameObject(name, typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+                Place(image.rectTransform, parent, l,b,r,t);
+                image.sprite = skin.sprite; image.type = skin.type; image.color = skin.color;
+                image.material = skin.material; image.pixelsPerUnitMultiplier = skin.pixelsPerUnitMultiplier;
+                return image;
             }
-            InputField Field(string value, string hint, bool multi, float l, float b, float r, float t)
+            var overlay = axisDialog = Surface("图文轴导入", canvas.transform, chooser.baseBack.GetComponent<Image>(), 0,0,1,1).gameObject;
+            var panel = Surface("导入面板", overlay.transform, pane.GetComponent<Image>(), .10f,.08f,.90f,.92f).transform;
+            Text Label(string value, Transform parent, int size, float l, float b, float r, float t)
             {
-                var obj = DefaultControls.CreateInputField(ui); Place(obj,panel.transform,l,b,r,t);
-                var field = obj.GetComponent<InputField>(); field.text = value;
-                field.lineType = multi ? InputField.LineType.MultiLineNewline : InputField.LineType.SingleLine;
-                field.textComponent.alignment = multi ? TextAnchor.UpperLeft : TextAnchor.MiddleLeft;
-                var placeholder = (Text)field.placeholder; placeholder.text = hint; placeholder.alignment = field.textComponent.alignment;
-                return field;
+                var label = new GameObject("文字", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
+                Place(label.rectTransform, parent, l,b,r,t);
+                label.font = search.textComponent.font; label.color = search.textComponent.color; label.fontSize = size;
+                label.text = value; label.alignment = TextAnchor.MiddleLeft; label.supportRichText = false; label.raycastTarget = false;
+                return label;
             }
-            Button ButtonAt(string caption, float l, float b, float r, float t, Action click)
+            void Field(InputField field, bool multi, string hint)
             {
-                var obj = DefaultControls.CreateButton(ui); Place(obj,panel.transform,l,b,r,t);
-                obj.GetComponentInChildren<Text>().text = caption;
-                var button = obj.GetComponent<Button>(); button.onClick.AddListener(() => click()); return button;
+                field.targetGraphic = field.GetComponent<Image>(); field.lineType = multi ? InputField.LineType.MultiLineNewline : InputField.LineType.SingleLine;
+                var text = field.textComponent = Label("", field.transform, 20, 0,0,1,1);
+                text.alignment = multi ? TextAnchor.UpperLeft : TextAnchor.MiddleCenter;
+                text.rectTransform.offsetMin = new Vector2(8, 6); text.rectTransform.offsetMax = new Vector2(-8, -6);
+                var placeholder = Instantiate(text, field.transform, false); placeholder.text = hint;
+                placeholder.color = search.placeholder.color; field.placeholder = placeholder;
             }
-            Label("导入完整操作轴", .03f,.88f,.37f,.98f);
-            var input = Field(SettingData.GetCurrentPlayerGroup().importedAxisText ?? "", "粘贴文字，或从本机识别图片。每行：倒计时、角色、操作。", true,.03f,.23f,.97f,.86f);
-            Label("目标队伍",.03f,.12f,.17f,.21f);
-            var slot = Field((SettingData.currentPlayerGroupNum + 1).ToString(), "队伍号", false,.17f,.12f,.27f,.21f);
-            slot.contentType = InputField.ContentType.IntegerNumber; slot.characterLimit = 4;
-            var status = Label("已有队伍直接替换；未写月份时使用当前会战。",.03f,.01f,.98f,.12f);
-            status.fontSize = 15;
+            void ButtonAt(Button skin, string caption, float l, float b, float r, float t, Action click)
+            {
+                var button = Instantiate(skin, panel, false); button.name = caption;
+                Place((RectTransform)button.transform, panel, l,b,r,t);
+                button.image.pixelsPerUnitMultiplier /= skin.transform.localScale.y;
+                var label = button.GetComponentInChildren<Text>(true); label.fontSize = 22; label.text = caption;
+                button.onClick = new Button.ButtonClickedEvent(); button.onClick.AddListener(() => click());
+                button.gameObject.SetActive(true);
+            }
+            var band = Surface("标题栏", panel, pane.Find("Image").GetComponent<Image>(), .004f,.965f,.996f,1.035f);
+            var title = Label("导入图文轴", band.transform, 24, 0,0,1,1);
+            title.color = chooser.nextButtonText.color; title.fontStyle = FontStyle.Bold; title.alignment = TextAnchor.MiddleCenter;
+            Label("◆ 操作轴原文", panel, 21, .035f,.895f,.57f,.954f);
+            Label("滚轮或拖动浏览；单击编辑，编辑时左拖选字、右拖浏览。", panel, 16, .035f,.818f,.62f,.896f);
+            var frame = Surface("原文滚动区", panel, search.image, .035f,.218f,.965f,.815f);
+            var scroll = frame.gameObject.AddComponent<ScrollRect>();
+            scroll.horizontal = false; scroll.vertical = true; scroll.movementType = roster.movementType; scroll.elasticity = roster.elasticity;
+            scroll.scrollSensitivity = roster.scrollSensitivity; scroll.inertia = roster.inertia; scroll.decelerationRate = roster.decelerationRate;
+            var view = Surface("Viewport", frame.transform, roster.viewport.GetComponent<Image>(), 0,0,1,1);
+            scroll.viewport = view.rectTransform; view.rectTransform.offsetMin = new Vector2(4,4); view.rectTransform.offsetMax = new Vector2(-28,-4);
+            view.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+            var body = Surface("可编辑原文", view.transform, search.image, 0,1,1,1);
+            body.color = Color.clear; body.rectTransform.pivot = new Vector2(.5f,1); scroll.content = body.rectTransform;
+            var input = body.gameObject.AddComponent<GuildAxisSourceField>(); Field(input, true, "粘贴操作轴文字，或在上方选择图片。");
+            input.scroll = scroll;
+            var bar = Instantiate(roster.verticalScrollbar, frame.transform, false);
+            var track = (RectTransform)bar.transform; Place(track, frame.transform, 1,0,1,1);
+            track.offsetMin = new Vector2(-25,4); track.offsetMax = new Vector2(-4,-4);
+            bar.gameObject.SetActive(true); scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent; scroll.verticalScrollbar = bar;
+            input.ShowDocument(SettingData.GetCurrentPlayerGroup().importedAxisText ?? "");
+            Label("◆ 目标队伍", panel, 20, .035f,.112f,.18f,.201f);
+            var slot = Surface("队伍号", panel, search.image, .19f,.124f,.30f,.194f).gameObject.AddComponent<InputField>();
+            Field(slot, false, "队伍号"); slot.contentType = InputField.ContentType.IntegerNumber; slot.characterLimit = 4;
+            slot.text = (SettingData.currentPlayerGroupNum + 1).ToString();
+            var status = Label("已有队伍直接替换；未写月份时使用当前会战。", panel, 16, .037f,.017f,.963f,.11f);
             bool reading = false;
             async void ReadImage(bool clipboard)
             {
@@ -93,16 +126,16 @@ namespace PCRCaculator.Guild
                     }
                     reading = true; status.text = "正在使用本机中文 OCR 识别…";
                     var text = clipboard ? await GuildAxisImage.RecognizeClipboardAsync(lifetime.Token) : await GuildAxisImage.RecognizeFileAsync(path, lifetime.Token);
-                    if (overlay != null) { input.text = text; status.text = text.Contains("【请核对") || text.Contains("【缺少") ? "请对照原图修正标记行后确定；目标队伍尚未改动。" : "识别完成，可直接确定；也可在这里修正文字。"; }
+                    if (overlay != null) { input.ShowDocument(text); status.text = text.Contains("【请核对") || text.Contains("【缺少") ? "请对照原图修正标记行后确定；目标队伍尚未改动。" : "识别完成，可直接确定；也可在这里修正文字。"; }
                 }
                 catch (Exception e) { if (overlay != null) status.text = e.Message; }
                 finally { reading = false; }
             }
             void Close() { lifetime.Cancel(); Destroy(overlay); }
-            ButtonAt("选图片",.55f,.89f,.74f,.98f,() => ReadImage(false));
-            ButtonAt("粘贴图片",.76f,.89f,.97f,.98f,() => ReadImage(true));
-            ButtonAt("取消",.59f,.12f,.76f,.21f,Close);
-            ButtonAt("确定",.79f,.12f,.97f,.21f,() =>
+            ButtonAt(secondary,"选图片",.640f,.846f,.786f,.927f,() => ReadImage(false));
+            ButtonAt(secondary,"粘贴图片",.799f,.846f,.964f,.927f,() => ReadImage(true));
+            ButtonAt(secondary,"取消",.620f,.117f,.778f,.202f,Close);
+            ButtonAt(primary,"确定",.800f,.117f,.965f,.202f,() =>
             {
                 if (reading) { status.text = "图片仍在识别，请稍候。"; return; }
                 if (!int.TryParse(slot.text, out int number) || number < 1 || number > 9999) { status.text = "请输入有效的队伍号（从 1 开始）。"; return; }
@@ -220,11 +253,7 @@ namespace PCRCaculator.Guild
             var updated = SettingData.WithImportedTeam(number, group);
             SaveManager.SaveAtomically(updated);
             staticsettingData = updated;
-            if (SettingData.currentPlayerGroupNum == number-1)
-            {
-                AutoModeToggle.SetIsOnWithoutNotify(false); SetModeToggle.SetIsOnWithoutNotify(false);
-                SemanModeToggle.SetIsOnWithoutNotify(false); SequenceUBToggle?.SetIsOnWithoutNotify(false); Refresh();
-            }
+            RefreshAxisTeam(number - 1);
         }
     }
 }

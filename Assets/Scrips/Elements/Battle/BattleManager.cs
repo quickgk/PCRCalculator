@@ -2832,6 +2832,7 @@ namespace Elements.Battle
         {
             if (!battleFinished)
             {
+                DiscardImportedAxis();
                 finishBattle(eBattleResult.LOSE);
             }
         }

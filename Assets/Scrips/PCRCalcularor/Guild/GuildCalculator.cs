@@ -990,7 +990,7 @@ namespace PCRCaculator.Guild
         }
         public GuildTimelineData CreateTimeLineData()
         {
-            return new GuildTimelineData(MyGameCtrl.Instance.tempData.SettingData.GetCurrentPlayerGroup(), MyGameCtrl.Instance.CurrentSeedForSave, allUnitStateChangeDic,
+            return new GuildTimelineData(MyGameCtrl.Instance.tempData.ResultTeam, MyGameCtrl.Instance.CurrentSeedForSave, allUnitStateChangeDic,
                 allUnitAbnormalStateDic, allUnitHPDic, allUnitTPDic, allUnitSkillExecDic, playerUnitDamageDic, bossDefChangeDic, bossMgcDefChangeDic, AllRandomDataList)
             {
                 UBExecTime = CreateUBExecTimeData(),
@@ -1007,7 +1007,7 @@ namespace PCRCaculator.Guild
         }
         public GuildTimelineData CreateAutoSaveData()
         {
-            return new GuildTimelineData(MyGameCtrl.Instance.tempData.SettingData.GetCurrentPlayerGroup(), MyGameCtrl.Instance.CurrentSeedForSave)
+            return new GuildTimelineData(MyGameCtrl.Instance.tempData.ResultTeam, MyGameCtrl.Instance.CurrentSeedForSave)
             {
                 UBExecTime = CreateUBExecTimeData(),
             };
@@ -1158,7 +1158,7 @@ namespace PCRCaculator.Guild
             //MainManager.Instance.WindowConfigMessage("是否将预设阵容的UB时间改为当前的UB时间？", ReplaceUBTime_0, null);
             GameObject a = Instantiate(UBTimeEditorPrefab);
             a.transform.SetParent(BaseBackManager.Instance.latestUIback.transform, false);
-            a.GetComponent<UBTimeEditor>().Init(MyGameCtrl.Instance.tempData.SettingData.GetCurrentPlayerGroup());
+            a.GetComponent<UBTimeEditor>().Init(MyGameCtrl.Instance.tempData.ResultTeam);
         }
         /*private void ReplaceUBTime_0()
         {

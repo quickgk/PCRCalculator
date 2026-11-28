@@ -166,7 +166,7 @@ namespace PCRCaculator
             var group = settings.GetCurrentPlayerGroup();
             if (group.importedAxis != null)
             {
-                const string message = "当前服务端协议不能执行图文轴，请使用本机单次战斗。";
+                const string message = "图文轴不能批量计算";
                 MainManager.Instance?.WindowMessage(message);
                 throw new InvalidOperationException(message);
             }

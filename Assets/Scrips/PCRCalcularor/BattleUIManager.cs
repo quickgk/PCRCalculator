@@ -522,6 +522,7 @@ namespace PCRCaculator.Battle
             }
             else
             {
+                if (!BattleManager.Instance.battleFinished) BattleManager.Instance.DiscardImportedAxis();
                 for (int i = 0; i < BattleManager.Instance.EnemyList.Count; i++)
                 {
                     BattleManager.Instance.EnemyList[i].Hp = 0;

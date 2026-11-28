@@ -177,6 +177,13 @@ namespace PCRCaculator.Guild
         public List<GuildRandomSpecialData> randomSpecialDatas = new List<GuildRandomSpecialData>();
 
         public GuildRandomData() { }
+        internal GuildRandomData WithFixedSeed(int seed)
+        {
+            var copy = (GuildRandomData)MemberwiseClone();
+            copy.UseFixedRandomSeed = true;
+            copy.RandomSeed = seed;
+            return copy;
+        }
         public GuildRandomData(string dataName)
         {
             DataName = dataName;
